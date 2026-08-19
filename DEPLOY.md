@@ -18,11 +18,37 @@ lets you drive it from the **DJOneHub iOS app** and the LuCI web page.
 ## 1. Binaries (you already control these)
 
 Three-architecture Linux binaries live in **your** repo
-`563617356/djonehub-release` (not a third party's). Current tag: `v0.1.0`.
+`563617356/djonehub-release` (not a third party's). The package always fetches
+`djonehub_v<tag>_linux_<arch>` from this repo.
+
+### Version → architecture mapping (IMPORTANT)
+
+The binaries currently in `djonehub-release` come from an **upstream author
+backup taken before takedown (`iniwex5/vohive-release`)**. That backup set had
+**mixed versions**, so there is **no single tag that contains all three
+architectures**. Pick the tag that matches your router's architecture:
+
+| Router arch | Use this tag | What's in the tag |
+|---|---|---|
+| `arm64` (aarch64) | **`v1.4.3`** | `djonehub_v1.4.3_linux_arm64` + `djonehub_v1.4.3_linux_amd64` |
+| `amd64` (x86_64)  | **`v1.4.3`** | `djonehub_v1.4.3_linux_amd64` |
+| `armv7` (armv7l)  | **`v1.5.0`** | `djonehub_v1.5.0_linux_armv7` |
+| any (all three)   | `v0.1.0` ⚠️ | `djonehub_v0.1.0_linux_{arm64,armv7,amd64}` — **untested PoC**, not the upstream build |
+
+> **How to apply the right tag:** the package uses one `DJONEHUB_VERSION` to
+> download the binary, so you must set it to the tag for **your** arch:
+> - When building packages (GitHub Actions `djonehub_version` input, or `make`):
+>   set it to `v1.4.3` for arm64/amd64 routers, `v1.5.0` for armv7 routers.
+> - At runtime (`install_core.sh <version>` or the LuCI "Install core" picker):
+>   pass the same arch-specific tag.
+>
+> If you want **one tag to cover all three architectures** (e.g. for a mixed
+> fleet), use `v0.1.0` — but remember it is the untested PoC, not the upstream
+> author build. The clean goal is to later publish a single upstream-version tag
+> (e.g. `v9.9.9`) covering arm64+amd64+armv7.
 
 - Update them: tag a new version here, or run the **Build Binaries** workflow,
   or build locally and `gh release upload` (see that repo's README).
-- The package always fetches `djonehub_v<tag>_linux_<arch>` from this repo.
 
 ## 2. Build & install the OpenWRT packages
 
@@ -35,7 +61,10 @@ Two packages:
 ### Option A — GitHub Actions (easiest)
 
 In `luci-app-djonehub` → Actions → **Release Packages** → run with
-`djonehub_version` = the tag in `djonehub-release` (default `v0.1.0`).
+`djonehub_version` = the tag in `djonehub-release`. **Use `v1.4.3` for
+arm64/amd64 routers, `v1.5.0` for armv7 routers** (see the mapping table in
+§1). Do **not** leave the default `v0.1.0` unless you intentionally want the
+untested PoC build for all three arches.
 
 - OpenWRT **24.10** → produces `.ipk`
 - OpenWRT **25.12** → produces `.apk`
@@ -75,10 +104,13 @@ uci commit djonehub
 ```
 
 Install / update the core binary from the release repo (LuCI page → "Install
-core", or):
+core", or). **Pass the tag for your router's arch** (see §1):
 
 ```sh
-/usr/share/djonehub/install_core.sh v0.1.0      # or "latest"
+# arm64 or amd64 router:
+/usr/share/djonehub/install_core.sh v1.4.3
+# armv7 router:
+/usr/share/djonehub/install_core.sh v1.5.0
 /etc/init.d/djonehub enable
 /etc/init.d/djonehub start
 ```
@@ -107,9 +139,13 @@ No app changes are needed — the iOS app is a plain HTTP/JSON client.
 
 ## Notes / caveats
 
-- The `v0.1.0` binaries in `djonehub-release` are **untested proof-of-concept**
-  builds made in this environment. Replace them with your own builds before
-  relying on them.
+- The better binaries in `djonehub-release` are **author-built upstream backups**
+  from `iniwex5/vohive-release` (taken before takedown): `v1.4.3` (arm64+amd64)
+  and `v1.5.0` (armv7). Because the backup set had mixed versions, there is no
+  single tag covering all three arches — follow the §1 mapping per router.
+- The `v0.1.0` binaries are **untested proof-of-concept** builds made in this
+  environment. They exist for all three arches (so a single tag works
+  everywhere), but replace them before relying on them.
 - Kernel support: QMI/MBIM need `qmi_wwan` / `cdc_mbim` (present in most
   OpenWRT images); the AT path (DJI USB `2ca3:4006`) uses a pure-Go serial
   implementation (`go.bug.st/serial`), no libusb/cgo on Linux.
