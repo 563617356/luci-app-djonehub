@@ -1,0 +1,30 @@
+{
+	"luci-app-djonehub": {
+		"description": "Grant access to DJOneHub LuCI app",
+		"read": {
+			"uci": [ "djonehub" ],
+			"file": {
+				"/usr/share/djonehub/status.sh": [ "exec" ],
+				"/usr/share/djonehub/logs.sh": [ "exec" ],
+				"/usr/share/djonehub/releases.sh": [ "exec" ],
+				"/usr/share/djonehub/plugin_status.sh": [ "exec" ],
+				"/usr/share/djonehub/device_probe.sh": [ "exec" ],
+				"/usr/share/djonehub/task_status.sh": [ "exec" ]
+			}
+		},
+		"write": {
+			"uci": [ "djonehub" ],
+			"file": {
+				"/usr/share/djonehub/apply_config.sh": [ "exec" ],
+				"/usr/share/djonehub/install_core.sh": [ "exec" ],
+				"/usr/share/djonehub/rollback_core.sh": [ "exec" ],
+				"/usr/share/djonehub/service.sh": [ "exec" ],
+				"/usr/share/djonehub/clear_logs.sh": [ "exec" ],
+				"/usr/share/djonehub/update_plugin.sh": [ "exec" ],
+				"/usr/share/djonehub/device_tools.sh": [ "exec" ],
+				"/usr/share/djonehub/task_start.sh": [ "exec" ],
+				"/usr/share/djonehub/task_cancel.sh": [ "exec" ]
+			}
+		}
+	}
+}

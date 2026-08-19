@@ -1,0 +1,13 @@
+{
+	"admin/services/djonehub": {
+		"title": "DJOneHub",
+		"order": 60,
+		"action": {
+			"type": "view",
+			"path": "djonehub/index"
+		},
+		"depends": {
+			"acl": [ "luci-app-djonehub" ]
+		}
+	}
+}
