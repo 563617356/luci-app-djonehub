@@ -1,0 +1,10 @@
+# OpenWRT package: every shipped file runs on Linux/ash.
+# Force LF in both the repository and the working tree so that editing on
+# Windows can never inject CRLF into init.d scripts, *.sh helpers or Makefiles
+# (a stray \r makes ash fail with "not found" / procd refuse to start).
+* text=auto eol=lf
+
+# Binaries fetched into djonehub-core/files/ at build time must stay untouched.
+djonehub-core/files/* -text
+*.ipk -text
+*.apk -text
