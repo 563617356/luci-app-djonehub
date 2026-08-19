@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=djonehub-core
-DJONEHUB_VERSION?=v0.1.0
+DJONEHUB_VERSION?=v1.5.2
 PKG_VERSION:=$(patsubst v%,%,$(DJONEHUB_VERSION))
 PKG_RELEASE:=1
 PKG_LICENSE:=Proprietary

@@ -6,14 +6,14 @@ on:
       djonehub_version:
         description: DJOneHub release tag
         required: true
-        default: v0.1.0
+        default: v1.5.2
   push:
     tags:
       - 'v*'
 
 env:
   TZ: Asia/Shanghai
-  DJONEHUB_VERSION: ${{ github.event.inputs.djonehub_version || 'v0.1.0' }}
+  DJONEHUB_VERSION: ${{ github.event.inputs.djonehub_version || 'v1.5.2' }}
 
 jobs:
   prepare:

@@ -23,29 +23,34 @@ Three-architecture Linux binaries live in **your** repo
 
 ### Version → architecture mapping (IMPORTANT)
 
-The binaries currently in `djonehub-release` come from an **upstream author
-backup taken before takedown (`iniwex5/vohive-release`)**. That backup set had
-**mixed versions**, so there is **no single tag that contains all three
-architectures**. Pick the tag that matches your router's architecture:
+The binaries in `djonehub-release` come from **upstream author backups taken
+before takedown (`iniwex5/vohive-release`)**. Use the table below:
 
-| Router arch | Use this tag | What's in the tag |
+| Router arch | **Recommended tag** | What's in the tag |
 |---|---|---|
-| `arm64` (aarch64) | **`v1.4.3`** | `djonehub_v1.4.3_linux_arm64` + `djonehub_v1.4.3_linux_amd64` |
-| `amd64` (x86_64)  | **`v1.4.3`** | `djonehub_v1.4.3_linux_amd64` |
-| `armv7` (armv7l)  | **`v1.5.0`** | `djonehub_v1.5.0_linux_armv7` |
+| **any (all three)** | **`v1.5.2`** ✅ | `djonehub_v1.5.2_linux_{arm64,amd64,armv7}` — **full upstream set**, one tag covers every arch. **This is the package default.** |
+| `arm64` (aarch64) | `v1.4.3` (alt) | `djonehub_v1.4.3_linux_arm64` + `djonehub_v1.4.3_linux_amd64` (older upstream set, no armv7) |
+| `amd64` (x86_64)  | `v1.4.3` (alt) | `djonehub_v1.4.3_linux_amd64` (older upstream set, no armv7) |
+| `armv7` (armv7l)  | `v1.5.0` (alt) | `djonehub_v1.5.0_linux_armv7` (older upstream set, armv7 only) |
 | any (all three)   | `v0.1.0` ⚠️ | `djonehub_v0.1.0_linux_{arm64,armv7,amd64}` — **untested PoC**, not the upstream build |
 
-> **How to apply the right tag:** the package uses one `DJONEHUB_VERSION` to
-> download the binary, so you must set it to the tag for **your** arch:
-> - When building packages (GitHub Actions `djonehub_version` input, or `make`):
->   set it to `v1.4.3` for arm64/amd64 routers, `v1.5.0` for armv7 routers.
-> - At runtime (`install_core.sh <version>` or the LuCI "Install core" picker):
->   pass the same arch-specific tag.
+> **TL;DR:** just use **`v1.5.2`** for everything — it has all three
+> architectures, so a single `DJONEHUB_VERSION=v1.5.2` works for any router.
+> The older `v1.4.3` / `v1.5.0` tags exist only because an earlier backup set had
+> mixed versions (no single full-set tag at the time); they are kept as
+> alternatives.
 >
-> If you want **one tag to cover all three architectures** (e.g. for a mixed
-> fleet), use `v0.1.0` — but remember it is the untested PoC, not the upstream
-> author build. The clean goal is to later publish a single upstream-version tag
-> (e.g. `v9.9.9`) covering arm64+amd64+armv7.
+> **How to apply:** the package uses one `DJONEHUB_VERSION` to download the
+> binary.
+> - Building packages (GitHub Actions `djonehub_version` input, or `make`):
+>   default is already `v1.5.2`; override only if you specifically want an older
+>   tag.
+> - At runtime (`install_core.sh <version>` or the LuCI "Install core" picker):
+>   default is `v1.5.2`.
+>
+> If you later publish a single newer upstream-version tag (e.g. `v9.9.9`)
+> covering all three arches, just bump the default in `djonehub-core/Makefile`
+> and `.github/workflows/release.yml`.
 
 - Update them: tag a new version here, or run the **Build Binaries** workflow,
   or build locally and `gh release upload` (see that repo's README).
@@ -61,10 +66,9 @@ Two packages:
 ### Option A — GitHub Actions (easiest)
 
 In `luci-app-djonehub` → Actions → **Release Packages** → run with
-`djonehub_version` = the tag in `djonehub-release`. **Use `v1.4.3` for
-arm64/amd64 routers, `v1.5.0` for armv7 routers** (see the mapping table in
-§1). Do **not** leave the default `v0.1.0` unless you intentionally want the
-untested PoC build for all three arches.
+`djonehub_version` = the tag in `djonehub-release`. The default is **`v1.5.2`**
+(full upstream set, all three arches) — just leave it as-is. Only override if
+you specifically want an older tag (see the mapping table in §1).
 
 - OpenWRT **24.10** → produces `.ipk`
 - OpenWRT **25.12** → produces `.apk`
@@ -104,16 +108,16 @@ uci commit djonehub
 ```
 
 Install / update the core binary from the release repo (LuCI page → "Install
-core", or). **Pass the tag for your router's arch** (see §1):
+core", or). Default tag is **`v1.5.2`** (full set, all arches) — just run:
 
 ```sh
-# arm64 or amd64 router:
-/usr/share/djonehub/install_core.sh v1.4.3
-# armv7 router:
-/usr/share/djonehub/install_core.sh v1.5.0
+/usr/share/djonehub/install_core.sh v1.5.2
 /etc/init.d/djonehub enable
 /etc/init.d/djonehub start
 ```
+
+(Need an older tag instead? See the §1 mapping: `v1.4.3` for arm64/amd64,
+`v1.5.0` for armv7.)
 
 Verify: `curl -s http://127.0.0.1:7575/ | head` (or check the LuCI status page).
 
