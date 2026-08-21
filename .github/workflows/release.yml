@@ -190,20 +190,32 @@ jobs:
             fi
           done
 
-          package_dir="$(pwd)/bin/packages/${SDK_ARCH}/djonehub"
+          # APK 的 .apk 在 compile 后不一定自动归位到 bin/packages/，
+          # 显式执行 install 步骤，把包拷贝进 bin/packages/<arch>/<feed>/
+          for pkg in luci-app-djonehub djonehub-core; do
+            make "package/feeds/djonehub/${pkg}/install" -j1 2>&1 | tail -n 5 | tee -a /tmp/compile.log || true
+          done
+
           dist_dir="$(pwd)/../dist/${{ matrix.id }}"
           mkdir -p "$dist_dir"
+          cd "$(pwd)/.."
 
-          shopt -s nullglob
-          package_files=("$package_dir"/*.${PACKAGE_EXT})
-          if [ ${#package_files[@]} -eq 0 ]; then
-            # 不再直接 exit 1：改为告警，避免 apk 失败阻塞整个发布流程
-            echo "::warning::No .${PACKAGE_EXT} packages were produced in ${package_dir}"
-          else
-            cp "$package_dir"/*.${PACKAGE_EXT} "$dist_dir"/
+          # 兼容 ipk(归位到 bin/packages) 与 apk(归位方式不同，可能留在 build_dir) 两种收集方式：
+          # 1) 优先从标准位置 bin/packages/<arch>/djonehub/ 收集；
+          # 2) 兜底在整个 sdk 树里找我们自己的包（luci-app-djonehub* / djonehub-core*）
+          mapfile -t pkg_files < <(find sdk/bin/packages -path '*/djonehub/*' -name "*.${PACKAGE_EXT}" 2>/dev/null)
+          if [ ${#pkg_files[@]} -eq 0 ]; then
+            mapfile -t pkg_files < <(find sdk -name "*.${PACKAGE_EXT}" \( -name 'luci-app-djonehub*' -o -name 'djonehub-core*' \) 2>/dev/null)
           fi
-          cp "$package_dir"/Packages* "$dist_dir"/ 2>/dev/null || true
-          cp "$package_dir"/APKINDEX* "$dist_dir"/ 2>/dev/null || true
+
+          if [ ${#pkg_files[@]} -eq 0 ]; then
+            # 不再直接 exit 1：改为告警，避免 apk 失败阻塞整个发布流程
+            echo "::warning::No .${PACKAGE_EXT} packages were produced"
+          else
+            cp "${pkg_files[@]}" "$dist_dir"/
+          fi
+          cp sdk/bin/packages/*/djonehub/Packages* "$dist_dir"/ 2>/dev/null || true
+          cp sdk/bin/packages/*/djonehub/APKINDEX* "$dist_dir"/ 2>/dev/null || true
 
           {
             echo "Tag: ${{ needs.prepare.outputs.tag_name }}"
@@ -213,7 +225,7 @@ jobs:
             echo "Build ID: ${{ matrix.id }}"
             echo "SDK: ${SDK_NAME}"
             echo "Package format: ${PACKAGE_EXT}"
-            echo "Package count: ${#package_files[@]}"
+            echo "Package count: ${#pkg_files[@]}"
           } > "$dist_dir/BUILD-INFO.txt"
 
       - name: Record APK build status
