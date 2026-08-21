@@ -99,6 +99,8 @@ jobs:
             label: OpenWrt 24.10 IPK
           - id: openwrt_25_apk
             label: OpenWrt 25.12 APK
+            # apk 为可选项：25.x 的 APK 构建比 24.10 更严格，失败不影响 ipk 发布
+            continue-on-error: true
 
     steps:
       - name: Install packages
@@ -180,10 +182,11 @@ jobs:
           ./scripts/feeds update djonehub
           ./scripts/feeds install -a -p djonehub
 
+          : > /tmp/compile.log
           for pkg in luci-app-djonehub djonehub-core; do
             make "package/feeds/djonehub/${pkg}/clean" || true
-            if ! make "package/feeds/djonehub/${pkg}/compile" -j"$(nproc)"; then
-              make "package/feeds/djonehub/${pkg}/compile" -j1 V=s
+            if ! make "package/feeds/djonehub/${pkg}/compile" -j"$(nproc)" 2>&1 | tee -a /tmp/compile.log; then
+              make "package/feeds/djonehub/${pkg}/compile" -j1 V=s 2>&1 | tee -a /tmp/compile.log || true
             fi
           done
 
@@ -194,11 +197,11 @@ jobs:
           shopt -s nullglob
           package_files=("$package_dir"/*.${PACKAGE_EXT})
           if [ ${#package_files[@]} -eq 0 ]; then
-            echo "No .${PACKAGE_EXT} packages were produced in ${package_dir}" >&2
-            exit 1
+            # 不再直接 exit 1：改为告警，避免 apk 失败阻塞整个发布流程
+            echo "::warning::No .${PACKAGE_EXT} packages were produced in ${package_dir}"
+          else
+            cp "$package_dir"/*.${PACKAGE_EXT} "$dist_dir"/
           fi
-
-          cp "$package_dir"/*.${PACKAGE_EXT} "$dist_dir"/
           cp "$package_dir"/Packages* "$dist_dir"/ 2>/dev/null || true
           cp "$package_dir"/APKINDEX* "$dist_dir"/ 2>/dev/null || true
 
@@ -213,7 +216,32 @@ jobs:
             echo "Package count: ${#package_files[@]}"
           } > "$dist_dir/BUILD-INFO.txt"
 
+      - name: Record APK build status
+        if: always()
+        run: |
+          set -eu
+          dist_dir="dist/${{ matrix.id }}"
+          mkdir -p "$dist_dir"
+          shopt -s nullglob
+          apks=("$dist_dir"/*.apk)
+          if [ "${{ matrix.id }}" = "openwrt_25_apk" ] && [ ${#apks[@]} -eq 0 ]; then
+            {
+              echo "APK 构建未产出 .apk 包（OpenWrt 25.12 分支）。"
+              echo ""
+              echo "**常见原因**：25.x 的 APK 构建比 24.10 更严格（luci.mk / 包签名 / conffiles / 符号链接等），"
+              echo "或 DJOneHub core 下载失败、SDK 下载/解压失败。"
+              echo ""
+              echo "**末尾 80 行编译日志：**"
+              echo '```'
+              tail -n 80 /tmp/compile.log 2>/dev/null || true
+              echo '```'
+              echo ""
+              echo "完整日志请查看本次 workflow run 的 \`Build OpenWrt 25.12 APK\` 任务。"
+            } > "$dist_dir/APK_FAILURE.md"
+          fi
+
       - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: djonehub-${{ matrix.id }}
@@ -249,7 +277,7 @@ jobs:
           set -eu
           mkdir -p releases
           shopt -s nullglob
-
+          : > releases/_apk_failure.md
           for dir in artifacts/*; do
             [ -d "$dir" ] || continue
             for package in "$dir"/*.ipk "$dir"/*.apk; do
@@ -257,14 +285,30 @@ jobs:
               cp "$package" releases/
             done
             [ -f "$dir/BUILD-INFO.txt" ] && cp "$dir/BUILD-INFO.txt" "releases/$(basename "$dir")-BUILD-INFO.txt"
+            [ -f "$dir/APK_FAILURE.md" ] && cat "$dir/APK_FAILURE.md" >> releases/_apk_failure.md
           done
 
           (cd releases && sha256sum *.ipk *.apk 2>/dev/null > sha256sums.txt || true)
           ls -lh releases
 
+      - name: Build final release notes
+        run: |
+          set -eu
+          cat release-notes/release-notes.md > final-notes.md
+          if [ -s releases/_apk_failure.md ]; then
+            {
+              echo ""
+              echo "## ⚠️ APK 构建状态"
+              echo ""
+              echo "本次发布**未包含** OpenWrt 25.12 (apk) 包。原因如下："
+              echo ""
+              cat releases/_apk_failure.md
+            } >> final-notes.md
+          fi
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag_name }}
-          body_path: release-notes/release-notes.md
+          body_path: final-notes.md
           files: releases/*
