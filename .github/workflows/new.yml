@@ -89,7 +89,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-djonehub-${{ matrix.id }}
-          path: sdk/bin/packages/*/djonehub/luci-app-djonehub_*.${{ steps.sdk_env.outputs.package_ext }}
+          # ipk uses an underscore before the version (luci-app-djonehub_0.1.18-1_all.ipk)
+          # apk uses a hyphen (luci-app-djonehub-0.1.18-r1.apk). Match both with [-_].
+          path: sdk/bin/packages/*/djonehub/luci-app-djonehub[-_]*.${{ steps.sdk_env.outputs.package_ext }}
   # ... 上面的 Build 部分保持不变 ...
 
   release:
