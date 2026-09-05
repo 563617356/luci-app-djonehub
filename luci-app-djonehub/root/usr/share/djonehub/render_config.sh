@@ -41,7 +41,7 @@ preserve_unmanaged_config() {
 		{
 			key = top_key($0)
 			if (key != "") {
-				keep = (key != "server" && key != "web" && key != "data" && key != "log")
+				keep = (key != "server" && key != "data" && key != "log")
 			}
 			if (keep)
 				print
@@ -51,8 +51,6 @@ preserve_unmanaged_config() {
 
 host="$(uci_get host '0.0.0.0')"
 port="$(uci_get port '7575')"
-username="$(uci_get username 'admin')"
-password="$(uci_get password 'admin')"
 log_level="$(uci_get log_level 'info')"
 data_path="$(uci_get data_path '/etc/djonehub/data')"
 
@@ -60,9 +58,6 @@ case "$port" in
 	''|*[!0-9]*) fail "Invalid port: $port" ;;
 esac
 [ "$port" -ge 1 ] && [ "$port" -le 65535 ] || fail "Invalid port: $port"
-
-[ -n "$username" ] || fail "Username must not be empty"
-[ -n "$password" ] || fail "Password must not be empty"
 
 case "$data_path" in
 	/*) ;;
@@ -81,10 +76,6 @@ tmp="$CONFIG_FILE.tmp.$$"
 	printf 'server:\n'
 	printf '  host: %s\n' "$(yaml_quote "$host")"
 	printf '  port: %s\n' "$port"
-	printf '\n'
-	printf 'web:\n'
-	printf '  username: %s\n' "$(yaml_quote "$username")"
-	printf '  password: %s\n' "$(yaml_quote "$password")"
 	printf '\n'
 	printf 'data:\n'
 	printf '  path: %s\n' "$(yaml_quote "$data_path")"

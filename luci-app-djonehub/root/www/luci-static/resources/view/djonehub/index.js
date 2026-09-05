@@ -1028,14 +1028,10 @@ return view.extend({
 		o.default = '7575';
 		o.datatype = 'port';
 
-		o = s.option(form.Value, 'username', _('Web 用户名'));
-		o.default = 'admin';
-		o.rmempty = false;
-
-		o = s.option(form.Value, 'password', _('Web 密码'));
-		o.default = 'admin';
-		o.password = true;
-		o.rmempty = false;
+	o = s.option(form.Value, 'token', _('访问令牌 (API Token)'));
+	o.password = true;
+	o.rmempty = false;
+	o.description = _('核心服务以此令牌进行 Bearer 鉴权。未设置时服务将拒绝启动。请使用强随机字符串，不要留空。');
 
 		o = s.option(form.ListValue, 'log_level', _('日志级别'));
 		o.value('debug', 'debug');
@@ -1082,8 +1078,8 @@ return view.extend({
 		}));
 
 		var warnings = [];
-		if (status.default_password)
-			warnings.push(E('div', { 'class': 'alert-message warning' }, _('LuCI 配置中仍使用默认 Web 密码 admin/admin，请在“基础配置”中修改。')));
+		if (status.default_token)
+			warnings.push(E('div', { 'class': 'alert-message warning' }, _('尚未配置访问令牌 (token)，DJOneHub 核心将拒绝启动。请在“基础配置”中设置强随机令牌。')));
 		if (!status.core_installed)
 			warnings.push(E('div', { 'class': 'alert-message warning' }, _('DJOneHub 核心尚未安装。')));
 

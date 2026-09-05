@@ -41,12 +41,22 @@ start_service() {
 		return 1
 	}
 
+	# The core only authenticates via the "-token <secret>" flag (or the
+	# DJONEHUB_API_TOKEN env var). Without it the published builds disable auth
+	# entirely and expose the API on the LAN, so we refuse to start unauthenticated.
+	token="$(uci -q get djonehub.main.token)"
+	[ -n "$token" ] || token="$(uci -q get djonehub.main.password)"
+	[ -n "$token" ] || {
+		echo "DJOneHub: no API token configured (djonehub.main.token); refusing to start unauthenticated"
+		return 1
+	}
+
 	if core_supports_config_flag; then
 		cmd="cd '$RUNTIME_DIR' && exec '$BIN' -c '$CONFIG'"
 	else
 		listen="$(uci -q get djonehub.main.host):$(uci -q get djonehub.main.port)"
 		[ "$listen" = ":" ] && listen="0.0.0.0:7575"
-		cmd="cd '$RUNTIME_DIR' && exec '$BIN' -listen '$listen'"
+		cmd="cd '$RUNTIME_DIR' && exec '$BIN' -listen '$listen' -token '$token'"
 	fi
 
 	procd_open_instance

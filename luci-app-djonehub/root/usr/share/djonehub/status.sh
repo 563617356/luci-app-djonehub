@@ -177,8 +177,10 @@ if [ -s "$BACKUP_VERSION_FILE" ]; then
 	backup_version="$(cat "$BACKUP_VERSION_FILE" 2>/dev/null || true)"
 fi
 
-default_password=0
-[ "$(uci_get username 'admin')" = "admin" ] && [ "$(uci_get password 'admin')" = "admin" ] && default_password=1
+token="$(uci -q get djonehub.main.token 2>/dev/null || true)"
+[ -n "$token" ] || token="$(uci -q get djonehub.main.password 2>/dev/null || true)"
+default_token=0
+[ -z "$token" ] && default_token=1
 
 port_status="unknown"
 if command -v ss >/dev/null 2>&1; then
@@ -235,7 +237,7 @@ printf '"backup_version":"%s",' "$(json_escape "$backup_version")"
 printf '"host":"%s",' "$(json_escape "$host")"
 printf '"port":"%s",' "$(json_escape "$port")"
 printf '"data_path":"%s",' "$(json_escape "$data_path")"
-printf '"default_password":%s,' "$default_password"
+printf '"default_token":%s,' "$default_token"
 printf '"port_status":"%s",' "$port_status"
 collect_process_metrics
 df_json_fields root /
