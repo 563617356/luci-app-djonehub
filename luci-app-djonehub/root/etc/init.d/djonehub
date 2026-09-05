@@ -8,8 +8,19 @@ BIN="/etc/djonehub/bin/djonehub"
 CONFIG="/etc/djonehub/config/config.yaml"
 RUNTIME_DIR="/etc/djonehub"
 
+# The core binary exists in two CLI generations:
+#   * early builds read a YAML file and take "-c <config>"
+#   * the published builds only expose "-listen", "-port", "-token" and "-demo";
+#     passing "-c" makes them exit with "flag provided but not defined: -c",
+#     which silently left the service dead under procd.
+# Probe the binary's own usage output instead of assuming a generation.
+core_supports_config_flag() {
+	[ -x "$BIN" ] || return 1
+	"$BIN" -h 2>&1 | grep -Eq '^[[:space:]]*-c([[:space:]]|$)'
+}
+
 start_service() {
-	local enabled
+	local enabled listen cmd
 
 	enabled="$(uci -q get djonehub.main.enabled)"
 	[ "$enabled" = "1" ] || {
@@ -30,8 +41,16 @@ start_service() {
 		return 1
 	}
 
+	if core_supports_config_flag; then
+		cmd="cd '$RUNTIME_DIR' && exec '$BIN' -c '$CONFIG'"
+	else
+		listen="$(uci -q get djonehub.main.host):$(uci -q get djonehub.main.port)"
+		[ "$listen" = ":" ] && listen="0.0.0.0:7575"
+		cmd="cd '$RUNTIME_DIR' && exec '$BIN' -listen '$listen'"
+	fi
+
 	procd_open_instance
-	procd_set_param command /bin/sh -c "cd '$RUNTIME_DIR' && exec '$BIN' -c '$CONFIG'"
+	procd_set_param command /bin/sh -c "$cmd"
 	procd_set_param respawn 3600 5 5
 	procd_set_param stdout 1
 	procd_set_param stderr 1
