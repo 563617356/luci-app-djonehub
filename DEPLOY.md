@@ -101,8 +101,7 @@ make package/feeds/djonehub/djonehub-core/compile
 uci set djonehub.main.enabled='1'
 uci set djonehub.main.host='0.0.0.0'     # or 192.168.x.x to bind LAN only
 uci set djonehub.main.port='7575'
-uci set djonehub.main.username='admin'
-uci set djonehub.main.password='<set a strong token>'
+uci set djonehub.main.token='<set a strong random token>'
 uci set djonehub.main.release_repo='https://github.com/563617356/djonehub-release'
 uci commit djonehub
 ```
@@ -128,11 +127,12 @@ No app changes are needed — the iOS app is a plain HTTP/JSON client.
 1. Make sure the phone is on the router's LAN (or reachable via VPN / port forward).
 2. In the app, set the **server URL** to `http://<router-ip>:7575`
    (e.g. `http://192.168.1.1:7575`).
-3. Set the **token** to the `password` you configured in `/etc/config/djonehub`.
+3. Set the **token** to the value of `djonehub.main.token` in `/etc/config/djonehub` (a random one is generated on first install).
 4. Connect. The app talks to the same `:7575` API the LuCI page uses.
 
 > The backend accepts a bearer token via `-token <secret>` / the
-> `DJONEHUB_API_TOKEN` env var, which maps to the `password` UCI option above.
+> `DJONEHUB_API_TOKEN` env var, which maps to the `token` UCI option. Without it
+> the core disables auth and must not be exposed; the init script refuses to start.
 
 ## 5. Updating later
 
